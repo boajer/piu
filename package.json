@@ -4,7 +4,11 @@
   "description": "WhatsApp bot that transcribes and translates forwarded voice messages using Gemini",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
   },
   "dependencies": {
     "whatsapp-web.js": "^1.23.0",
