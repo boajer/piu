@@ -5,6 +5,14 @@ const { Client, LocalAuth, MessageTypes } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
+const logBuffer = [];
+const log = (tag, msg) => {
+  const line = `[${new Date().toISOString()}] [${tag}] ${msg}`;
+  console.log(line);
+  logBuffer.push(line);
+  if (logBuffer.length > 200) logBuffer.shift();
+};
+
 // --- Config ---
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const TARGET_LANGUAGE = process.env.TARGET_LANGUAGE || 'English';
@@ -21,6 +29,7 @@ if (!GEMINI_API_KEY) {
 }
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+log('BOOT', `target_language=${TARGET_LANGUAGE} model=${GEMINI_MODEL} allowed_chats=[${ALLOWED_CHATS}] allowed_senders=[${ALLOWED_SENDERS}]`);
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 const model = genAI.getGenerativeModel(
@@ -37,48 +46,62 @@ const client = new Client({
 });
 
 client.on('qr', async (qr) => {
+  log('AUTH', 'QR event fired — need to link device');
   if (process.env.WA_PHONE_NUMBER) {
-    const code = await client.requestPairingCode(process.env.WA_PHONE_NUMBER);
-    console.log(`\nWhatsApp pairing code: ${code}`);
-    console.log('In WhatsApp: Linked Devices → Link a Device → Link with phone number → enter the code above');
+    log('AUTH', `Requesting pairing code for ${process.env.WA_PHONE_NUMBER}...`);
+    try {
+      const code = await client.requestPairingCode(process.env.WA_PHONE_NUMBER);
+      log('AUTH', `Pairing code: ${code}`);
+      log('AUTH', 'In WhatsApp: Linked Devices → Link a Device → Link with phone number → enter the code above');
+    } catch (err) {
+      log('AUTH', `requestPairingCode failed: ${err.message} — falling back to QR scan`);
+      qrcode.generate(qr, { small: true });
+    }
   } else {
     console.log('\nScan this QR code with WhatsApp (Linked Devices):\n');
     qrcode.generate(qr, { small: true });
   }
 });
 
+client.on('authenticated', () => {
+  log('AUTH', 'Authenticated successfully — session saved');
+});
+
 client.on('ready', () => {
-  console.log(`\nBot is ready! Translating voice messages to: ${TARGET_LANGUAGE}`);
-  if (ALLOWED_CHATS.length > 0) {
-    console.log(`Monitoring chats: ${ALLOWED_CHATS.join(', ')}`);
-  } else {
-    console.log('Monitoring: ALL chats');
-  }
-  if (ALLOWED_SENDERS.length > 0) {
-    console.log(`Allowed senders: ${ALLOWED_SENDERS.join(', ')}`);
-  }
+  log('WA', `Client ready | target=${TARGET_LANGUAGE} | chats=${ALLOWED_CHATS.length ? ALLOWED_CHATS.join(',') : 'ALL'} | senders=${ALLOWED_SENDERS.length ? ALLOWED_SENDERS.join(',') : 'ALL'}`);
 });
 
 client.on('auth_failure', (msg) => {
-  console.error('Authentication failed:', msg);
+  log('AUTH', `Authentication FAILED: ${msg}`);
 });
 
 client.on('disconnected', (reason) => {
-  console.log('Client disconnected:', reason);
+  log('WA', `Disconnected: ${reason}`);
+});
+
+client.on('loading_screen', (percent, message) => {
+  log('WA', `Loading ${percent}% — ${message}`);
 });
 
 // --- Message handler ---
 client.on('message_create', async (message) => {
+  const t0 = Date.now();
+  log('MSG', `message_create | type=${message.type} | from=${message.from} | fromMe=${message.fromMe} | forwarded=${message.isForwarded}`);
+
   try {
     // Only handle audio/voice messages
     const isVoice = message.type === MessageTypes.AUDIO || message.type === MessageTypes.VOICE;
-    if (!isVoice) return;
+    if (!isVoice) {
+      log('MSG', `Skipped — not audio/voice (type=${message.type})`);
+      return;
+    }
 
     // If ALLOWED_SENDERS is set, only process messages from whitelisted numbers
     if (ALLOWED_SENDERS.length > 0) {
       const senderNumber = message.from.replace(/@c\.us$|@g\.us$/, '');
       const isAllowedSender = ALLOWED_SENDERS.some(n => senderNumber.includes(n));
-      if (!isAllowedSender) return;
+      log('MSG', `Sender check | number=${senderNumber} | allowed=${isAllowedSender}`);
+      if (!isAllowedSender) { log('MSG', 'Blocked by ALLOWED_SENDERS'); return; }
     }
 
     // If ALLOWED_CHATS is set, filter by chat name
@@ -86,27 +109,29 @@ client.on('message_create', async (message) => {
       const chat = await message.getChat();
       const chatName = chat.name ? chat.name.toLowerCase() : '';
       const isAllowed = ALLOWED_CHATS.some(allowed => chatName.includes(allowed));
-      if (!isAllowed) return;
+      log('MSG', `Chat check | name="${chatName}" | allowed=${isAllowed}`);
+      if (!isAllowed) { log('MSG', 'Blocked by ALLOWED_CHATS'); return; }
     }
 
-    console.log(`\nVoice message received (forwarded: ${message.isForwarded})`);
-
-    // Download the audio
+    log('MSG', 'Voice message accepted — downloading audio...');
+    const t1 = Date.now();
     const media = await message.downloadMedia();
+    log('MSG', `Audio downloaded in ${Date.now() - t1}ms | mimetype=${media?.mimetype} | size=${media?.data?.length ?? 0} bytes (base64)`);
+
     if (!media || !media.data) {
-      console.error('Failed to download media');
+      log('MSG', 'ERROR: media download returned empty');
       return;
     }
 
-    // React to show processing
     await message.react('⏳');
 
-    // Send audio to Gemini for transcription + translation
+    log('GEMINI', `Sending audio to ${GEMINI_MODEL} (${(media.data.length * 0.75 / 1024).toFixed(1)} KB)...`);
+    const t2 = Date.now();
     const result = await model.generateContent([
       {
         inlineData: {
           mimeType: media.mimetype || 'audio/ogg; codecs=opus',
-          data: media.data, // base64
+          data: media.data,
         },
       },
       {
@@ -125,16 +150,14 @@ If the audio is already in ${TARGET_LANGUAGE}, still provide both fields but not
 If you cannot understand the audio, say so clearly.`,
       },
     ]);
-
     const responseText = result.response.text();
+    log('GEMINI', `Response received in ${Date.now() - t2}ms | length=${responseText.length} chars`);
 
-    // Reply to the voice message with the translation
     await message.reply(responseText);
     await message.react('✅');
-
-    console.log('Translation sent successfully');
+    log('MSG', `Done — total processing time ${Date.now() - t0}ms`);
   } catch (err) {
-    console.error('Error processing voice message:', err.message);
+    log('ERROR', `Processing failed after ${Date.now() - t0}ms: ${err.message}`);
     try {
       await message.react('❌');
       await message.reply('Sorry, I could not process this voice message. Error: ' + err.message);
@@ -143,6 +166,15 @@ If you cannot understand the audio, say so clearly.`,
 });
 
 client.initialize();
+log('BOOT', 'WhatsApp client initializing...');
 
-// --- Health check server (required for cloud hosting) ---
-http.createServer((req, res) => res.end('ok')).listen(process.env.PORT || 3000);
+// --- Health check + log viewer server ---
+http.createServer((req, res) => {
+  if (req.url === '/logs') {
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end(logBuffer.join('\n'));
+  } else {
+    res.end('ok');
+  }
+}).listen(process.env.PORT || 3000);
+log('HTTP', `Health check server listening on port ${process.env.PORT || 3000}`);
