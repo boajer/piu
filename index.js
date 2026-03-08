@@ -1,5 +1,6 @@
 require('dotenv').config();
 
+const http = require('http');
 const { Client, LocalAuth, MessageTypes } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -137,3 +138,6 @@ If you cannot understand the audio, say so clearly.`,
 });
 
 client.initialize();
+
+// --- Health check server (required for cloud hosting) ---
+http.createServer((req, res) => res.end('ok')).listen(process.env.PORT || 3000);
