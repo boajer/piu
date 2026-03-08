@@ -123,8 +123,6 @@ client.on('message_create', async (message) => {
       return;
     }
 
-    await message.react('⏳');
-
     log('GEMINI', `Sending audio to ${GEMINI_MODEL} (${(media.data.length * 0.75 / 1024).toFixed(1)} KB)...`);
     const t2 = Date.now();
     const result = await model.generateContent([
@@ -153,14 +151,14 @@ If you cannot understand the audio, say so clearly.`,
     const responseText = result.response.text();
     log('GEMINI', `Response received in ${Date.now() - t2}ms | length=${responseText.length} chars`);
 
-    await message.reply(responseText);
-    await message.react('✅');
+    const selfId = client.info.wid._serialized;
+    await message.forward(selfId);
+    await client.sendMessage(selfId, responseText);
     log('MSG', `Done — total processing time ${Date.now() - t0}ms`);
   } catch (err) {
     log('ERROR', `Processing failed after ${Date.now() - t0}ms: ${err.message}`);
     try {
-      await message.react('❌');
-      await message.reply('Sorry, I could not process this voice message. Error: ' + err.message);
+      await client.sendMessage(client.info.wid._serialized, 'Error processing voice message: ' + err.message);
     } catch (_) {}
   }
 });
