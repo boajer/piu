@@ -10,6 +10,9 @@ const TARGET_LANGUAGE = process.env.TARGET_LANGUAGE || 'English';
 const ALLOWED_CHATS = process.env.ALLOWED_CHATS
   ? process.env.ALLOWED_CHATS.split(',').map(s => s.trim().toLowerCase())
   : [];
+const ALLOWED_SENDERS = process.env.ALLOWED_SENDERS
+  ? process.env.ALLOWED_SENDERS.split(',').map(s => s.trim())
+  : [];
 
 if (!GEMINI_API_KEY) {
   console.error('ERROR: GEMINI_API_KEY is not set in .env');
@@ -39,6 +42,9 @@ client.on('ready', () => {
   } else {
     console.log('Monitoring: ALL chats');
   }
+  if (ALLOWED_SENDERS.length > 0) {
+    console.log(`Allowed senders: ${ALLOWED_SENDERS.join(', ')}`);
+  }
 });
 
 client.on('auth_failure', (msg) => {
@@ -55,6 +61,13 @@ client.on('message', async (message) => {
     // Only handle audio/voice messages
     const isVoice = message.type === MessageTypes.AUDIO || message.type === MessageTypes.VOICE;
     if (!isVoice) return;
+
+    // If ALLOWED_SENDERS is set, only process messages from whitelisted numbers
+    if (ALLOWED_SENDERS.length > 0) {
+      const senderNumber = message.from.replace(/@c\.us$|@g\.us$/, '');
+      const isAllowedSender = ALLOWED_SENDERS.some(n => senderNumber.includes(n));
+      if (!isAllowedSender) return;
+    }
 
     // If ALLOWED_CHATS is set, filter by chat name
     if (ALLOWED_CHATS.length > 0) {
