@@ -63,7 +63,7 @@ client.on('disconnected', (reason) => {
 });
 
 // --- Message handler ---
-client.on('message', async (message) => {
+client.on('message_create', async (message) => {
   try {
     // Only handle audio/voice messages
     const isVoice = message.type === MessageTypes.AUDIO || message.type === MessageTypes.VOICE;
