@@ -20,8 +20,13 @@ if (!GEMINI_API_KEY) {
   process.exit(1);
 }
 
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+const model = genAI.getGenerativeModel(
+  { model: GEMINI_MODEL },
+  { apiVersion: 'v1beta' }
+);
 
 // --- WhatsApp client ---
 const client = new Client({
