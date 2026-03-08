@@ -30,9 +30,15 @@ const client = new Client({
   },
 });
 
-client.on('qr', (qr) => {
-  console.log('\nScan this QR code with WhatsApp (Linked Devices):\n');
-  qrcode.generate(qr, { small: true });
+client.on('qr', async (qr) => {
+  if (process.env.WA_PHONE_NUMBER) {
+    const code = await client.requestPairingCode(process.env.WA_PHONE_NUMBER);
+    console.log(`\nWhatsApp pairing code: ${code}`);
+    console.log('In WhatsApp: Linked Devices → Link a Device → Link with phone number → enter the code above');
+  } else {
+    console.log('\nScan this QR code with WhatsApp (Linked Devices):\n');
+    qrcode.generate(qr, { small: true });
+  }
 });
 
 client.on('ready', () => {
