@@ -89,6 +89,12 @@ client.on('message_create', async (message) => {
   log('MSG', `message_create | type=${message.type} | from=${message.from} | fromMe=${message.fromMe} | forwarded=${message.isForwarded}`);
 
   try {
+    // Skip messages sent by us (own forwards, transcription texts, etc.)
+    if (message.fromMe) {
+      log('MSG', 'Skipped — fromMe');
+      return;
+    }
+
     // Only handle audio/voice messages
     const isVoice = message.type === MessageTypes.AUDIO || message.type === MessageTypes.VOICE;
     if (!isVoice) {
