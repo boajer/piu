@@ -158,6 +158,7 @@ If you cannot understand the audio, say so clearly.`,
     log('GEMINI', `Response received in ${Date.now() - t2}ms | length=${responseText.length} chars`);
 
     const selfId = client.info.wid._serialized;
+    log('MSG', `Sending to self | selfId=${selfId}`);
     await message.forward(selfId);
     await client.sendMessage(selfId, responseText);
     log('MSG', `Done — total processing time ${Date.now() - t0}ms`);
