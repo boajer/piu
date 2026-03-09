@@ -84,7 +84,9 @@ async function start() {
       if (code === DisconnectReason.loggedOut) {
         log('AUTH', 'Logged out — clearing auth state and restarting');
         const fs = require('fs');
-        fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+        for (const f of fs.readdirSync(AUTH_DIR)) {
+          fs.rmSync(require('path').join(AUTH_DIR, f), { recursive: true, force: true });
+        }
       }
       start();
     } else if (connection === 'open') {
