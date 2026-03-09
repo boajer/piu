@@ -1,4 +1,4 @@
-name: Deploy to Fly.io
+name: Deploy to Oracle Cloud
 
 on:
   push:
@@ -9,15 +9,22 @@ on:
       - package.json
       - package-lock.json
       - Dockerfile
-      - fly.toml
+      - ecosystem.config.js
   workflow_dispatch:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only -a piu-bot
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ORACLE_HOST }}
+          username: ubuntu
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          script: |
+            cd ~/piu
+            git pull origin main
+            npm ci --omit=dev
+            pm2 restart piu-bot || pm2 start ecosystem.config.js
+            pm2 save
