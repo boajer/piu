@@ -24,6 +24,14 @@ WhatsApp personal bot that transcribes and translates forwarded voice messages u
 
 ---
 
+## Security — Non-Negotiable
+- **Never commit real tokens, API keys, or secrets** — not even temporarily, not even in a private branch.
+- `.env` is always gitignored. `.env.example` must contain placeholder values only (e.g. `your_key_here`).
+- Before staging any file, check it does not contain real credentials.
+- If a secret is ever found in git history, flag it immediately so the user can revoke and rotate it.
+
+---
+
 ## Git Workflow
 
 - Every logical change gets its **own isolated commit** — do not bundle unrelated changes.
