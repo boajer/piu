@@ -1,4 +1,3 @@
-# fly.toml — piu WhatsApp bot (worker, no HTTP)
 app = "piu-bot"
 primary_region = "lhr"
 
@@ -7,6 +6,11 @@ primary_region = "lhr"
 [env]
   TARGET_LANGUAGE = "English"
   # ALLOWED_CHATS — set via: fly secrets set ALLOWED_CHATS="chat1,chat2"
+
+[http_service]
+  internal_port = 3000
+  auto_stop_machines = "off"
+  auto_start_machines = true
 
 [mounts]
   source = "whatsapp_auth"
