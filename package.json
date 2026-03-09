@@ -11,9 +11,10 @@
     "nodemon": "^3.1.0"
   },
   "dependencies": {
-    "whatsapp-web.js": "^1.23.0",
+    "@whiskeysockets/baileys": "^6.7.16",
     "@google/generative-ai": "^0.24.1",
     "qrcode-terminal": "^0.12.0",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "pino": "^9.0.0"
   }
 }

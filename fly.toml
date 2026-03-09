@@ -10,7 +10,7 @@ primary_region = "lhr"
 
 [mounts]
   source = "whatsapp_auth"
-  destination = "/app/.wwebjs_auth"
+  destination = "/app/auth"
 
 [vm]
   memory = "512mb"
