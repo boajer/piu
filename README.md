@@ -93,10 +93,10 @@ cd piu
 
 ```bash
 fly apps create piu-bot
-fly volumes create whatsapp_auth --region mad --size 1
+fly volumes create whatsapp_auth --region lhr --size 1
 ```
 
-> Change `mad` (Madrid) to the region closest to you: `iad` (US East), `lhr` (London), `fra` (Frankfurt), `sin` (Singapore), `syd` (Sydney).
+> Change `lhr` (London) to the region closest to you: `iad` (US East), `fra` (Frankfurt), `ams` (Amsterdam), `sin` (Singapore), `syd` (Sydney).
 
 **3. Set secrets**
 
