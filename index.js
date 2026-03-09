@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 const http = require('http');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage, getContentType } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, downloadMediaMessage, getContentType, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const qrcode = require('qrcode-terminal');
 const pino = require('pino');
@@ -44,11 +44,15 @@ const silentLogger = pino({ level: 'silent' });
 
 async function start() {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+  const { version } = await fetchLatestBaileysVersion();
+  log('BOOT', `Baileys WA version: ${version.join('.')}`);
 
   const sock = makeWASocket({
+    version,
     auth: state,
     printQRInTerminal: false,
     logger: silentLogger,
+    browser: ['Ubuntu', 'Chrome', '120.0.0'],
   });
 
   sock.ev.on('creds.update', saveCreds);
