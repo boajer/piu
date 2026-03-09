@@ -58,20 +58,24 @@ async function start() {
 
   sock.ev.on('creds.update', saveCreds);
 
+  let pairingRequested = false;
+
   sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
     if (qr) {
       log('AUTH', 'QR event fired — need to link device');
-      if (process.env.WA_PHONE_NUMBER) {
-        log('AUTH', `Requesting pairing code for ${process.env.WA_PHONE_NUMBER}...`);
+      if (process.env.WA_PHONE_NUMBER && !pairingRequested) {
+        pairingRequested = true;
+        const phone = process.env.WA_PHONE_NUMBER.replace(/^\+/, '');
+        log('AUTH', `Requesting pairing code for ${phone}...`);
         try {
-          const code = await sock.requestPairingCode(process.env.WA_PHONE_NUMBER);
+          const code = await sock.requestPairingCode(phone);
           log('AUTH', `Pairing code: ${code}`);
           log('AUTH', 'In WhatsApp: Linked Devices → Link a Device → Link with phone number → enter the code above');
         } catch (err) {
           log('AUTH', `requestPairingCode failed: ${err.message} — falling back to QR scan`);
           qrcode.generate(qr, { small: true });
         }
-      } else {
+      } else if (!process.env.WA_PHONE_NUMBER) {
         console.log('\nScan this QR code with WhatsApp (Linked Devices):\n');
         qrcode.generate(qr, { small: true });
       }
