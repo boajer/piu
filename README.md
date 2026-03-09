@@ -199,6 +199,6 @@ Press `Ctrl+C`. Your WhatsApp session is saved in `.wwebjs_auth/` — no need to
 
 ## Notes
 
-- Uses [whatsapp-web.js](https://github.com/pedroslopez/whatsapp-web.js), an unofficial library that connects via WhatsApp Web. Intended for personal use only.
+- Uses [Baileys](https://github.com/WhiskeySockets/Baileys), an unofficial library that connects to WhatsApp via WebSocket. No browser or Puppeteer required. Intended for personal use only.
 - Voice messages are never written to disk — audio is passed in-memory to Gemini and discarded.
 - The `/logs` endpoint (`GET /logs`) returns a rolling buffer of the last 200 log lines — useful for debugging on cloud deployments.
