@@ -148,6 +148,7 @@ All options go in `.env` (local) or set via `fly secrets set` (cloud):
 | `ALLOWED_CHATS`    | No       | (all)            | Comma-separated chat names to monitor. Partial, case-insensitive match. |
 | `ALLOWED_SENDERS`  | No       | (all)            | Comma-separated phone numbers allowed to trigger the bot (country code + digits, no `+`). |
 | `WA_PHONE_NUMBER`  | No       | —                | Your WhatsApp number for pairing code auth (cloud). No `+` or spaces. |
+| `LOG_TOKEN`        | No       | —                | Secret token required to access the `/logs` endpoint. If unset, logs are public. |
 | `PORT`             | No       | `3000`           | HTTP port for the health check endpoint. |
 
 **Examples:**
@@ -193,7 +194,7 @@ npm run dev   # starts with nodemon — auto-restarts on file changes
 
 ### Stopping the bot (local)
 
-Press `Ctrl+C`. Your WhatsApp session is saved in `.wwebjs_auth/` — no need to scan the QR code again on the next start.
+Press `Ctrl+C`. Your WhatsApp session is saved in `./auth/` — no need to scan the QR code again on the next start.
 
 ---
 
