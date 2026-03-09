@@ -53,6 +53,7 @@ async function start() {
     printQRInTerminal: false,
     logger: silentLogger,
     browser: ['Ubuntu', 'Chrome', '120.0.0'],
+    keepAliveIntervalMs: 10000,
   });
 
   sock.ev.on('creds.update', saveCreds);
@@ -80,7 +81,12 @@ async function start() {
       const code = new Boom(lastDisconnect?.error)?.output?.statusCode;
       const shouldReconnect = code !== DisconnectReason.loggedOut;
       log('WA', `Connection closed | code=${code} | reconnecting=${shouldReconnect}`);
-      if (shouldReconnect) start();
+      if (code === DisconnectReason.loggedOut) {
+        log('AUTH', 'Logged out — clearing auth state and restarting');
+        const fs = require('fs');
+        fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+      }
+      start();
     } else if (connection === 'open') {
       log('WA', `Connected | jid=${sock.user?.id} | target=${TARGET_LANGUAGE} | chats=${ALLOWED_CHATS.length ? ALLOWED_CHATS.join(',') : 'ALL'} | senders=${ALLOWED_SENDERS.length ? ALLOWED_SENDERS.join(',') : 'ALL'}`);
     }
