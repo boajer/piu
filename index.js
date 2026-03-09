@@ -8,8 +8,9 @@ const pino = require('pino');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const logBuffer = [];
+const maskPhone = s => s.replace(/\d{8,}/g, m => m.slice(0, 3) + '*'.repeat(m.length - 5) + m.slice(-2));
 const log = (tag, msg) => {
-  const line = `[${new Date().toISOString()}] [${tag}] ${msg}`;
+  const line = `[${new Date().toISOString()}] [${tag}] ${maskPhone(msg)}`;
   console.log(line);
   logBuffer.push(line);
   if (logBuffer.length > 200) logBuffer.shift();
@@ -183,8 +184,15 @@ start();
 log('BOOT', 'WhatsApp client initializing...');
 
 // --- Health check + log viewer server ---
+const LOG_TOKEN = process.env.LOG_TOKEN;
 http.createServer((req, res) => {
-  if (req.url === '/logs') {
+  const url = new URL(req.url, 'http://localhost');
+  if (url.pathname === '/logs') {
+    if (LOG_TOKEN && url.searchParams.get('token') !== LOG_TOKEN) {
+      res.writeHead(401, { 'Content-Type': 'text/plain' });
+      res.end('unauthorized');
+      return;
+    }
     res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end(logBuffer.join('\n'));
   } else {
